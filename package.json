@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@cels/react-treeview": "^1.1.2",
+    "@chakra-ui/icons": "^1.1.1",
     "@chakra-ui/react": "^1.7.3",
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
@@ -12,8 +14,10 @@
     "@uiw/react-md-editor": "^3.9.1",
     "browserfs": "^1.4.3",
     "framer-motion": "^4.1.17",
+    "ipfs-http-client": "^55.0.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
+    "react-icons": "^4.3.1",
     "react-scripts": "5.0.0",
     "web-vitals": "^2.1.2"
   },

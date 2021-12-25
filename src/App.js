@@ -10,6 +10,35 @@ import { Text, Input, Button } from '@chakra-ui/react'
 
 import MDEditor from '@uiw/react-md-editor';
 
+import { Tabs, TabList, TabPanels, Tab, TabPanel } from '@chakra-ui/react'
+
+import ReactTreeView from "@cels/react-treeview";
+import "@cels/react-treeview/dist/styles.css";
+
+import { IconButton } from '@chakra-ui/react'
+
+import { Flex, Box } from '@chakra-ui/react'
+
+
+const  dummyData  = {
+  label:  'root',
+  value:  "root/",
+  children: [
+      {
+          label:  'parent',
+          value:  "root/parent/",
+          children: [
+              { label:  'child1', value:"root/parent/child1", leaf:true },
+              { label:  'child2', value:"root/parent/child2", leaf:true }
+          ]
+      },
+      {
+          label:  'parent2',
+          value:"root/parent2/"
+      }
+  ]
+};
+
 var bfs = {};
 BrowserFS.install(bfs);
 BrowserFS.configure({
@@ -29,6 +58,33 @@ function App() {
   const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => setFileName(event.target.value)
+
+  const loadProject = (rootPath) => {
+    let fs = bfs.require('fs');
+
+    const readDirRecursive = (rootPath) => {
+      const endInSlash = (rootPath.slice(-1) == "/");
+      const filler = endInSlash ? "" : "/";
+      var result = [];
+      try {
+        let entries = fs.readdirSync(rootPath);
+        console.log(entries);
+        entries.forEach((val) => {
+          result.push(readDirRecursive(rootPath + filler + val));
+        })
+      } catch (err) {
+        if (err.errno == 20) {
+          result = rootPath;
+        } else {
+          console.log(err);
+        }
+      }
+
+      return result;
+    }
+
+    return readDirRecursive(rootPath);
+  }
 
   const saveFile = () => {
     setLoading(true);
@@ -81,15 +137,38 @@ function App() {
     })
   }
 
+  const mytest = () => {
+    console.log(loadProject("/"))
+  }
+
   return (
     <div className="App">
       <ChakraProvider>
         <Text>Course Editor</Text>
-        <MDEditor
-          value={fileContent}
-          onChange={setFileContent}
-        />
-        <Input 
+        <Flex>
+          <Box>
+            <ReactTreeView 
+              data={dummyData} />
+          </Box>
+          <Box flex='1'>
+            <MDEditor
+              value={fileContent}
+              onChange={setFileContent}
+            />
+          </Box>
+          
+        
+        </Flex>
+        <Button onClick={mytest}>Test</Button>
+      </ChakraProvider>
+    </div>
+  );
+}
+
+export default App;
+
+/*
+<Input 
           value={fileName}
           onChange={handleChange}
           placeholder='File Name' 
@@ -98,9 +177,4 @@ function App() {
         <Button onClick={readDir}>Read Dir</Button>
         <Button onClick={createDir}>Create Dir</Button>
         <Button onClick={getStat}>Get Stat</Button>
-      </ChakraProvider>
-    </div>
-  );
-}
-
-export default App;
+*/
