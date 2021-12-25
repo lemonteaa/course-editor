@@ -168,7 +168,7 @@ function App() {
         let filecontent = fs.readFileSync(nodeVal)
         let curTabCount = editingFiles.length
 
-        setEditingFiles(cur => [...cur, { path: nodeVal, label: myLast(nodeVal.split("/")), content: filecontent.toString() }])
+        setEditingFiles(cur => [...cur, { path: nodeVal, label: myLast(nodeVal.split("/")), content: filecontent.toString(), modified: false }])
         setTabIndex(curTabCount + 1)
         /*, (err, content) => {
           console.log("Read FIle CB")
@@ -191,10 +191,30 @@ function App() {
     const data = editingFiles.slice();
     data[tab] = {
       ...data[tab],
-      content: c
+      content: c,
+      modified: true
     }
 
     setEditingFiles(data)
+  }
+
+  const saveOne = () => {
+    let curFile = editingFiles[tabIndex - 1];
+    if (curFile.modified) {
+      let fs = bfs.require('fs');
+      fs.writeFile(curFile.path, curFile.content, function (e) {
+        console.log("Saved file?")
+        console.log(e)
+
+        const data = editingFiles.slice();
+        data[tabIndex - 1] = {
+          ...data[tabIndex - 1],
+          modified: false
+        }
+
+        setEditingFiles(data)
+      })
+    }
   }
 
   return (
@@ -208,13 +228,20 @@ function App() {
               onNodeClick={handleNodeClick} />
           </Box>
           <Box flex='1'>
+            <Button onClick={saveOne}>Save</Button>
           <Tabs index={tabIndex} onChange={handleTabsChange}>
             <TabList>
               <Tab>Intro</Tab>
               {editingFiles.map((f) => {
-                return (
-                  <Tab>{f.label}</Tab>
-                )
+                if (f.modified) {
+                  return (
+                    <Tab><Text as='i'>{f.label} *</Text></Tab>
+                  )
+                } else {
+                  return (
+                    <Tab>{f.label}</Tab>
+                  )
+                }
               })}
             </TabList>
             <TabPanels>
