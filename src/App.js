@@ -61,6 +61,8 @@ function App() {
 
   const [projTree, setProjTree] = useState();
 
+  const [editingFiles, setEditingFiles] = useState([]);
+
   const myLast = (arr) => {
     let n = arr.length
     return arr[n-1]
@@ -157,12 +159,42 @@ function App() {
 
   const handleNodeClick = (nodeId, nodeVal, isLeafNode) => {
     if (isLeafNode) {
-      let fs = bfs.require('fs');
-      fs.readFile(nodeVal, (err, content) => {
-        console.log("Read FIle CB")
-        setFileContent(content.toString())
+      let tab = editingFiles.findIndex((f) => {
+        return (f.path == nodeVal)
       })
+
+      if (tab == -1) {
+        let fs = bfs.require('fs');
+        let filecontent = fs.readFileSync(nodeVal)
+        let curTabCount = editingFiles.length
+
+        setEditingFiles(cur => [...cur, { path: nodeVal, label: myLast(nodeVal.split("/")), content: filecontent.toString() }])
+        setTabIndex(curTabCount + 1)
+        /*, (err, content) => {
+          console.log("Read FIle CB")
+          setFileContent(content.toString())
+        })*/
+      } else {
+        setTabIndex(tab+1);
+      }
     }
+  }
+
+  const [tabIndex, setTabIndex] = useState(0)
+
+  const handleTabsChange = (index) => {
+    setTabIndex(index)
+  }
+
+  const mdEditorUpdate = (c) => {
+    let tab = tabIndex - 1;
+    const data = editingFiles.slice();
+    data[tab] = {
+      ...data[tab],
+      content: c
+    }
+
+    setEditingFiles(data)
   }
 
   return (
@@ -176,10 +208,31 @@ function App() {
               onNodeClick={handleNodeClick} />
           </Box>
           <Box flex='1'>
-            <MDEditor
-              value={fileContent}
-              onChange={setFileContent}
-            />
+          <Tabs index={tabIndex} onChange={handleTabsChange}>
+            <TabList>
+              <Tab>Intro</Tab>
+              {editingFiles.map((f) => {
+                return (
+                  <Tab>{f.label}</Tab>
+                )
+              })}
+            </TabList>
+            <TabPanels>
+              <TabPanel>
+                Introduction
+              </TabPanel>
+              {editingFiles.map((f) => {
+                return (
+                  <TabPanel>
+                    <MDEditor
+                      value={f.content}
+                      onChange={mdEditorUpdate}
+                    />
+                  </TabPanel>
+                )
+              })}
+            </TabPanels>
+          </Tabs>
           </Box>
           
         
