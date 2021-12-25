@@ -41,6 +41,15 @@ function App() {
     })
   }
 
+  const createDir = () => {
+    let fs = bfs.require('fs');
+    fs.mkdir(fileName, (err) => {
+      //TODO
+      console.log("Create Dir CB")
+      console.log(err)
+    })
+  }
+
   const readFile = () => {
     let fs = bfs.require('fs');
     fs.readFile(fileName, (err, content) => {
@@ -49,6 +58,29 @@ function App() {
       console.log(content.toString())
     })
   }
+
+  const readDir = () => {
+    let fs = bfs.require('fs');
+    fs.readdir(fileName, (err, files) => {
+      //TODO
+      console.log("Read Dir CB")
+      console.log(err)
+      if (err) {
+        console.log(err.errno)
+      }
+      console.log(files)
+    })
+  }
+
+  const getStat = () => {
+    let fs = bfs.require('fs');
+    fs.stat(fileName, (x) => {
+      //TODO
+      console.log("getStat CB")
+      console.log(x)
+    })
+  }
+
   return (
     <div className="App">
       <ChakraProvider>
@@ -63,6 +95,9 @@ function App() {
           placeholder='File Name' 
         /> <Button isLoading={loading} onClick={saveFile}>Save</Button>
         <Button onClick={readFile}>Read File (Test)</Button>
+        <Button onClick={readDir}>Read Dir</Button>
+        <Button onClick={createDir}>Create Dir</Button>
+        <Button onClick={getStat}>Get Stat</Button>
       </ChakraProvider>
     </div>
   );
