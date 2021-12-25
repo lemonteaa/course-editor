@@ -59,6 +59,13 @@ function App() {
 
   const handleChange = (event) => setFileName(event.target.value)
 
+  const [projTree, setProjTree] = useState();
+
+  const myLast = (arr) => {
+    let n = arr.length
+    return arr[n-1]
+  }
+
   const loadProject = (rootPath) => {
     let fs = bfs.require('fs');
 
@@ -74,13 +81,18 @@ function App() {
         })
       } catch (err) {
         if (err.errno == 20) {
-          result = rootPath;
+          return { type: "file", value: rootPath, label: myLast(rootPath.split("/")), leaf: true };
         } else {
           console.log(err);
         }
       }
 
-      return result;
+      return {
+        type: "folder",
+        value: rootPath,
+        label: (rootPath == "/") ? "/" : myLast(rootPath.split("/")),
+        children: result
+      };
     }
 
     return readDirRecursive(rootPath);
@@ -138,7 +150,19 @@ function App() {
   }
 
   const mytest = () => {
-    console.log(loadProject("/"))
+    const s = loadProject("/");
+    console.log(s)
+    setProjTree(s)
+  }
+
+  const handleNodeClick = (nodeId, nodeVal, isLeafNode) => {
+    if (isLeafNode) {
+      let fs = bfs.require('fs');
+      fs.readFile(nodeVal, (err, content) => {
+        console.log("Read FIle CB")
+        setFileContent(content.toString())
+      })
+    }
   }
 
   return (
@@ -148,7 +172,8 @@ function App() {
         <Flex>
           <Box>
             <ReactTreeView 
-              data={dummyData} />
+              data={projTree} 
+              onNodeClick={handleNodeClick} />
           </Box>
           <Box flex='1'>
             <MDEditor
