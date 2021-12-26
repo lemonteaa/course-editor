@@ -120,6 +120,10 @@ function App() {
 
     fs.writeFile(mypath + filler + newFileFolder, "", () => {
       console.log("File created at: " + mypath + filler + newFileFolder);
+
+      const s = loadProject("/");
+      console.log(s)
+      setProjTree(s);
     })
   }
   const newFolder = () => {
@@ -130,6 +134,10 @@ function App() {
 
     fs.mkdir(mypath + filler + newFileFolder, () => {
       console.log("Folder created at: " + mypath + filler + newFileFolder);
+
+      const s = loadProject("/");
+      console.log(s)
+      setProjTree(s);
     })
   }
 
