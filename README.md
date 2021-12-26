@@ -6,6 +6,8 @@
 
 A frontend to edit course content (i.e. a bunch of text files) and then "submit" it by saving to IPFS, and then posting on Hive (TODO).
 
+Note: Press "Test" to load the files into the tree view.
+
 Tasklist:
 
 - [x] Integrate with [BrowserFS](https://github.com/jvilk/BrowserFS)
@@ -19,3 +21,4 @@ Tasklist:
 
 - BrowserFS doesn't seems to support `rm` yet (it has `rmdir`, but only works on empty dir)
 - Change to streaming mode for large files?
+- Currently we haven't really handled the BrowserFS's init's async nature yet.
