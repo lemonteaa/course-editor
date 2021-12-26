@@ -75,25 +75,6 @@ function ModalComp(props) {
 }
 
 
-const  dummyData  = {
-  label:  'root',
-  value:  "root/",
-  children: [
-      {
-          label:  'parent',
-          value:  "root/parent/",
-          children: [
-              { label:  'child1', value:"root/parent/child1", leaf:true },
-              { label:  'child2', value:"root/parent/child2", leaf:true }
-          ]
-      },
-      {
-          label:  'parent2',
-          value:"root/parent2/"
-      }
-  ]
-};
-
 function GetNearestParentFolder(path) {
   let t = path.split("/")
   t.pop()
@@ -189,61 +170,14 @@ function App() {
     return readDirRecursive(rootPath);
   }
 
-  const saveFile = () => {
-    setLoading(true);
-    let fs = bfs.require('fs');
-    fs.writeFile(fileName, fileContent, function (e) {
-      //TODO
-      console.log("Write FIle CB")
-      console.log(e);
-      setLoading(false);
-    })
-  }
 
-  const createDir = () => {
-    let fs = bfs.require('fs');
-    fs.mkdir(fileName, (err) => {
-      //TODO
-      console.log("Create Dir CB")
-      console.log(err)
-    })
-  }
 
-  const readFile = () => {
-    let fs = bfs.require('fs');
-    fs.readFile(fileName, (err, content) => {
-      //TODO
-      console.log("Read FIle CB")
-      console.log(content.toString())
-    })
-  }
 
-  const readDir = () => {
-    let fs = bfs.require('fs');
-    fs.readdir(fileName, (err, files) => {
-      //TODO
-      console.log("Read Dir CB")
-      console.log(err)
-      if (err) {
-        console.log(err.errno)
-      }
-      console.log(files)
-    })
-  }
 
-  const getStat = () => {
-    let fs = bfs.require('fs');
-    fs.stat(fileName, (x) => {
-      //TODO
-      console.log("getStat CB")
-      console.log(x)
-    })
-  }
 
   const mytest = () => {
     const s = loadProject("/");
     console.log(s)
-    setProjTree(s)
   }
 
   const handleNodeClick = (nodeId, nodeVal, isLeafNode) => {
