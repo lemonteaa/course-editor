@@ -37,6 +37,10 @@ import {
   ModalCloseButton,
 } from '@chakra-ui/react'
 
+import { JsonEditor } from 'jsoneditor-react';
+import 'jsoneditor-react/es/editor.min.css';
+
+import { flattenDeep } from "lodash";
 
 function ModalComp(props) {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -96,6 +100,8 @@ BrowserFS.configure({
 })
 
 function App() {
+  const [cid, setCID] = useState("");
+
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState("**Hello world!!!**");
   const [loading, setLoading] = useState(false);
@@ -208,7 +214,9 @@ function App() {
         let filecontent = fs.readFileSync(nodeVal)
         let curTabCount = editingFiles.length
 
-        setEditingFiles(cur => [...cur, { path: nodeVal, label: myLast(nodeVal.split("/")), content: filecontent.toString(), modified: false }])
+        let isJson = (nodeVal.substring(nodeVal.length - 4) == "json");
+
+        setEditingFiles(cur => [...cur, { path: nodeVal, label: myLast(nodeVal.split("/")), content: filecontent.toString(), modified: false, isJson: isJson }])
         setTabIndex(curTabCount + 1)
         /*, (err, content) => {
           console.log("Read FIle CB")
@@ -273,8 +281,12 @@ function App() {
       const content = fs.readFileSync(proj.value);
       return [{ path: proj.value, content: content }];
     } else {
-      return proj.children.map(walkProject).flatten();
+      return flattenDeep(proj.children.map(walkProject));
     }
+  }
+
+  const debugwalk = () => {
+    console.log(walkProject(projTree));
   }
 
   const publish = async () => {
@@ -289,8 +301,17 @@ function App() {
       content: 'ABC'
     }];
     
-    var res = await client.addAll(walkProject(projTree));
-    console.log(res);
+    var results = await client.addAll(walkProject(projTree));
+    var collectedResults = [];
+    for await (let res of results) {
+      collectedResults.push(res);
+      console.log(res);
+    }
+    let mycid = collectedResults[collectedResults.length - 1].cid;
+    console.log(mycid);
+    //console.log(mycid.toBaseEncodedString());
+    console.log(mycid.toString());
+    setCID(mycid.toString());
   }
 
   return (
@@ -351,14 +372,23 @@ function App() {
                 Introduction
               </TabPanel>
               {editingFiles.map((f) => {
-                return (
-                  <TabPanel>
-                    <MDEditor
-                      value={f.content}
-                      onChange={mdEditorUpdate}
+                if (f.isJson) {
+                  return (
+                    <JsonEditor
+                        value={f.content}
+                        onChange={mdEditorUpdate}
                     />
-                  </TabPanel>
-                )
+                  )
+                } else {
+                  return (
+                    <TabPanel>
+                      <MDEditor
+                        value={f.content}
+                        onChange={mdEditorUpdate}
+                      />
+                    </TabPanel>
+                  )
+                }
               })}
             </TabPanels>
           </Tabs>
@@ -366,9 +396,14 @@ function App() {
           
         
         </Flex>
+        <VStack>
+          <Box>
         <Button onClick={mytest}>Test</Button>
         <Button onClick={publish}>Publish to IPFS</Button>
-        {projTree ? JSON.stringify(projTree) : ""}
+        <Button onClick={debugwalk}>Walk project</Button>
+        {projTree ? JSON.stringify(projTree) : ""}</Box>
+        <Box><Text as="h4">IPFS CID: </Text> {cid}</Box>
+        </VStack>
       </ChakraProvider>
     </div>
   );
