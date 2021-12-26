@@ -94,6 +94,13 @@ const  dummyData  = {
   ]
 };
 
+function GetNearestParentFolder(path) {
+  let t = path.split("/")
+  t.pop()
+  let res = t.join("/")
+  return (res == "") ? "/" : res;
+}
+
 var bfs = {};
 BrowserFS.install(bfs);
 BrowserFS.configure({
@@ -119,6 +126,31 @@ function App() {
   const [editingFiles, setEditingFiles] = useState([]);
 
   const [selectedNode, setSelectedNode] = useState();
+  const [isLeafNode, setIsLeafNode] = useState(false);
+
+  const [newFileFolder, setNewFileFolder] = useState("");
+  const handleNewFileChange = (event) => setNewFileFolder(event.target.value)
+
+  const newFile = () => {
+    const mypath = isLeafNode ? GetNearestParentFolder(selectedNode) : selectedNode;
+    let fs = bfs.require('fs');
+
+    let filler = (mypath == "/") ? "" : "/";
+
+    fs.writeFile(mypath + filler + newFileFolder, "", () => {
+      console.log("File created at: " + mypath + filler + newFileFolder);
+    })
+  }
+  const newFolder = () => {
+    const mypath = isLeafNode ? GetNearestParentFolder(selectedNode) : selectedNode;
+    let fs = bfs.require('fs');
+
+    let filler = (mypath == "/") ? "" : "/";
+
+    fs.mkdir(mypath + filler + newFileFolder, () => {
+      console.log("Folder created at: " + mypath + filler + newFileFolder);
+    })
+  }
 
   const myLast = (arr) => {
     let n = arr.length
@@ -216,6 +248,7 @@ function App() {
 
   const handleNodeClick = (nodeId, nodeVal, isLeafNode) => {
     setSelectedNode(nodeVal);
+    setIsLeafNode(isLeafNode);
 
     if (isLeafNode) {
       let tab = editingFiles.findIndex((f) => {
@@ -278,6 +311,12 @@ function App() {
 
   const deleteFile = () => {
     console.log(selectedNode);
+    let fs = bfs.require('fs');
+
+    fs.rmdir(selectedNode, (err) => {
+      console.log("delete cb")
+      console.log(err)
+    });
   };
 
   const walkProject = (proj) => {
@@ -314,29 +353,28 @@ function App() {
           <Box>
             <VStack>
               <Box>
-                <IconButton
-                  variant='outline'
-                  colorScheme='teal'
-                  icon={<VscNewFile />}
-                />
-                <ModalComp onConfirm={deleteFile} modalTitle="Confirm Deleting File/Folder"
-                  mybody={<Text>You are about to delete the file {selectedNode}. Proceed?</Text>} 
-                  icon={<RiDeleteBin6Line />} />
-                <IconButton
-                  variant='outline'
-                  colorScheme='teal'
-                  icon={<VscNewFolder />}
-                />
+                <ModalComp onConfirm={newFile} modalTitle="Create New File"
+                  mybody={
+                  <Box>
+                    <Text>Create a new file under {isLeafNode ? GetNearestParentFolder(selectedNode) : selectedNode }:</Text>
+                    <Input value={newFileFolder} onChange={handleNewFileChange} />
+                  </Box>} 
+                  icon={<VscNewFile />} />
+                  <ModalComp onConfirm={newFolder} modalTitle="Create New Folder"
+                  mybody={
+                  <Box>
+                    <Text>Create a new folder under {isLeafNode ? GetNearestParentFolder(selectedNode) : selectedNode }:</Text>
+                    <Input value={newFileFolder} onChange={handleNewFileChange} />
+                  </Box>} 
+                  icon={<VscNewFolder />} />
                 <IconButton
                   variant='outline'
                   colorScheme='teal'
                   icon={<BiRename />}
                 />
-                <IconButton
-                  variant='outline'
-                  colorScheme='teal'
-                  icon={<RiDeleteBin6Line />}
-                />
+                <ModalComp onConfirm={deleteFile} modalTitle="Confirm Deleting File/Folder"
+                  mybody={<Text>You are about to delete the {isLeafNode ? "file" : "folder"} {selectedNode}. Proceed?</Text>} 
+                  icon={<RiDeleteBin6Line />} />
               </Box>
               <ReactTreeView 
                 data={projTree} 
