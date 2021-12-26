@@ -176,8 +176,14 @@ function App() {
 
 
   const mytest = () => {
-    const s = loadProject("/");
-    console.log(s)
+    let fs = bfs.require('fs');
+    fs.mkdir("/welcome", (err) => {
+      console.log("welcome");
+
+      const s = loadProject("/");
+      console.log(s)
+      setProjTree(s);
+    })
   }
 
   const handleNodeClick = (nodeId, nodeVal, isLeafNode) => {
