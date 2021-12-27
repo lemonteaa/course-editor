@@ -1,14 +1,14 @@
 import logo from './logo.svg';
 import './App.css';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
 import { useDisclosure } from '@chakra-ui/react'
 
 import * as BrowserFS from 'browserfs';
 
 import { ChakraProvider } from '@chakra-ui/react'
-import { Text, Input, Button } from '@chakra-ui/react'
+import { Text, Input, Button, FormLabel } from '@chakra-ui/react'
 
 import MDEditor from '@uiw/react-md-editor';
 
@@ -21,11 +21,22 @@ import { IconButton, CloseButton } from '@chakra-ui/react'
 
 import { Flex, Box, VStack } from '@chakra-ui/react'
 
+import { Divider } from '@chakra-ui/react'
+
+import {
+  List,
+  ListItem,
+  ListIcon,
+  OrderedList,
+  UnorderedList,
+} from '@chakra-ui/react'
+
 import { create } from "ipfs-http-client";
 
 import { VscNewFile, VscNewFolder } from 'react-icons/vsc'
 import { BiRename } from 'react-icons/bi'
 import { RiDeleteBin6Line }from 'react-icons/ri'
+import { MdUpdate, MdCheckCircle, MdSchedule } from 'react-icons/md'
 
 import {
   Modal,
@@ -41,6 +52,15 @@ import { JsonEditor } from 'jsoneditor-react';
 import 'jsoneditor-react/es/editor.min.css';
 
 import { flattenDeep } from "lodash";
+
+import { Client, PrivateKey } from '@hiveio/dhive';
+let opts = {
+  addressPrefix: 'TST',
+  chainId:
+      '18dcf0a285365fc58b71f18b3d3fec954aa0c141c44e4e5cb4cf777b9eab274e',
+};
+//connect to server which is connected to the network/testnet
+const dhive_client = new Client("http://127.0.0.1:8090", opts);
 
 function ModalComp(props) {
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -78,6 +98,184 @@ function ModalComp(props) {
   )
 }
 
+function FullPublish(props) {
+  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const [pubStep, setPubStep] = useState([{ finished: false, inprogress: false }, { finished: false, inprogress: false }]);
+
+  const hiveName = useRef();
+  const hivePostingKey = useRef();
+
+  const [cid, setCID] = useState("");
+  const [permalink, setPermalink] = useState("");
+
+  const walkProject = (proj) => {
+    let fs = bfs.require('fs');
+    if (proj.type == "file") {
+      const content = fs.readFileSync(proj.value);
+      return [{ path: proj.value, content: content }];
+    } else {
+      return flattenDeep(proj.children.map(walkProject));
+    }
+  }
+
+  const publishIPFS = async () => {
+    const client = create({
+      host: "ipfs.infura.io",
+      port: 5001,
+      protocol: "https"
+    });
+
+    const files = [{
+      path: '/tmp/myfile.txt',
+      content: 'ABC'
+    }];
+    
+    var results = await client.addAll(walkProject(props.getProjTree()));
+    var collectedResults = [];
+    for await (let res of results) {
+      collectedResults.push(res);
+      console.log(res);
+    }
+    let mycid = collectedResults[collectedResults.length - 1].cid;
+    console.log(mycid);
+    //console.log(mycid.toBaseEncodedString());
+    console.log(mycid.toString());
+    setCID(mycid.toString());
+  }
+
+  const publishHive = async (author, postingkey, manifest, coursecid) => {
+    const privateKey = PrivateKey.fromString(postingkey);
+
+    const taglist = ["course", "test"];
+
+    const json_metadata = JSON.stringify({ 
+        course_title: manifest["course_title"],
+        ipfs_uri: coursecid,
+        category: manifest["category"],
+        difficulty: manifest["difficulty"],
+        course_desc: manifest["course_desc"],
+        course_obj: manifest["course_obj"],
+        time_cost_est: manifest["time_cost_est"],
+        unit_breakdown: manifest["unit_breakdown"],
+        tags: taglist,
+    });
+
+    const payload = {
+      author: author,
+      body: "This is the official page for the course " + manifest["course_title"] + ", please respect the community rules. Thanks!",
+      json_metadata: json_metadata,
+      parent_author: '',
+      parent_permlink: taglist[0],
+      permlink: manifest["hive_permalink"],
+      title: "Course Announcement (Official): " + manifest["course_title"],
+    };
+    console.log('client.broadcast.comment:', payload);
+    let result = await dhive_client.broadcast.comment(payload, privateKey);
+    console.log('response');
+    console.log(result);
+
+    //TODO: Set permalinks
+  }
+
+  const fullpub = async () => {
+    console.log(hiveName.current.value);
+    console.log(hivePostingKey.current.value);
+    const author = hiveName.current.value;
+    const postingkey = hivePostingKey.current.value;
+
+    //Get manifest
+    let fs = bfs.require('fs');
+    let manifest = JSON.parse(fs.readFileSync("/welcome/manifest.json").toString());
+    console.log(manifest);
+    console.log(manifest["course_title"]);
+
+    //Generate permalink
+    const mypermalink = manifest["course_title"].replace(/\s+/g, '-').toLowerCase().replace(/[^a-zA-Z0-9\-]/g, '') + '-' + 
+    Math.random()
+        .toString(36)
+        .substring(2, 7);
+    setPermalink("@" + author + "/" + mypermalink);
+    
+    //Modify manifest.json and submit to IPFS
+    manifest["hive_permalink"] = mypermalink;
+    manifest["hive_author"] = author;
+    fs.writeFileSync("/welcome/manifest.json", JSON.stringify(manifest));
+
+    const p = pubStep.slice();
+    p[0] = {...p[0], inprogress: true };
+    setPubStep(p);
+
+    console.log(walkProject(props.getProjTree()))
+    await publishIPFS();
+
+    const q = pubStep.slice();
+    q[0] = {...q[0], inprogress: false, finished: true };
+    q[1] = {...q[1], inprogress: true};
+    setPubStep(q);
+
+    //Submit post to Hive
+    await publishHive(author, postingkey, manifest, cid);
+
+    const r = pubStep.slice();
+    r[1] = {...r[1], inprogress: false, finished: true };
+    setPubStep(r);
+  }
+
+  return (
+    <>
+      <Button onClick={onOpen}>Full publish</Button>
+
+      <Modal isOpen={isOpen} onClose={onClose}>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Publish Course</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <VStack>
+            <Text>To publish the course, we will need to know your Hive posting credentials:</Text>
+            <Box>
+              <FormLabel htmlFor='username'>Name</FormLabel>
+              <Input
+                ref={hiveName}
+                id='username'
+                placeholder='Please enter user name'
+              />
+            </Box>
+            <Box>
+              <FormLabel htmlFor='postkey'>Posting Key</FormLabel>
+              <Input
+                ref={hivePostingKey}
+                id='postkey'
+                placeholder='Please enter Posting Key'
+              />
+            </Box>
+            <Divider/>
+            <Text>Publish Progress:</Text>
+            <List spacing={3}>
+              <ListItem>
+                <ListIcon as={(pubStep[0].finished) ? MdCheckCircle : (pubStep[0].inprogress ? MdUpdate : MdSchedule)} color='green.500' />
+                Publish to IPFS {(pubStep[0].finished) ? ("...Done. (CID: " + props.cid + ")") : (pubStep[0].inprogress ? "..." : "")}
+              </ListItem>
+              <ListItem>
+                <ListIcon as={(pubStep[1].finished) ? MdCheckCircle : (pubStep[1].inprogress ? MdUpdate : MdSchedule)} color='green.500' />
+                Post to Hive Blockchain {(pubStep[1].finished) ? ("...Done. (Permalink: " + props.permalink + ")") : (pubStep[1].inprogress ? "..." : "")}
+              </ListItem>
+            </List>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme='blue' mr={3} onClick={fullpub}>
+              Publish!
+            </Button>
+            <Button variant='ghost' onClick={onClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
+  )
+}
 
 function GetNearestParentFolder(path) {
   let t = path.split("/")
@@ -100,7 +298,7 @@ BrowserFS.configure({
 })
 
 function App() {
-  const [cid, setCID] = useState("");
+
 
   const [fileName, setFileName] = useState("");
   const [fileContent, setFileContent] = useState("**Hello world!!!**");
@@ -289,29 +487,8 @@ function App() {
     console.log(walkProject(projTree));
   }
 
-  const publish = async () => {
-    const client = create({
-      host: "ipfs.infura.io",
-      port: 5001,
-      protocol: "https"
-    });
-
-    const files = [{
-      path: '/tmp/myfile.txt',
-      content: 'ABC'
-    }];
-    
-    var results = await client.addAll(walkProject(projTree));
-    var collectedResults = [];
-    for await (let res of results) {
-      collectedResults.push(res);
-      console.log(res);
-    }
-    let mycid = collectedResults[collectedResults.length - 1].cid;
-    console.log(mycid);
-    //console.log(mycid.toBaseEncodedString());
-    console.log(mycid.toString());
-    setCID(mycid.toString());
+  const getProjTree = () => {
+    return projTree;
   }
 
   return (
@@ -372,14 +549,14 @@ function App() {
                 Introduction
               </TabPanel>
               {editingFiles.map((f) => {
-                if (f.isJson) {
+                /*if (f.isJson) {
                   return (
                     <JsonEditor
                         value={f.content}
                         onChange={mdEditorUpdate}
                     />
                   )
-                } else {
+                } else {*/
                   return (
                     <TabPanel>
                       <MDEditor
@@ -388,7 +565,7 @@ function App() {
                       />
                     </TabPanel>
                   )
-                }
+                //}
               })}
             </TabPanels>
           </Tabs>
@@ -399,10 +576,11 @@ function App() {
         <VStack>
           <Box>
         <Button onClick={mytest}>Test</Button>
-        <Button onClick={publish}>Publish to IPFS</Button>
+        
+        <FullPublish getProjTree={getProjTree} />
         <Button onClick={debugwalk}>Walk project</Button>
         {projTree ? JSON.stringify(projTree) : ""}</Box>
-        <Box><Text as="h4">IPFS CID: </Text> {cid}</Box>
+        
         </VStack>
       </ChakraProvider>
     </div>
@@ -421,4 +599,7 @@ export default App;
         <Button onClick={readDir}>Read Dir</Button>
         <Button onClick={createDir}>Create Dir</Button>
         <Button onClick={getStat}>Get Stat</Button>
+
+        <Button onClick={publish}>Publish to IPFS</Button>
+        <Box><Text as="h4">IPFS CID: </Text> {cid}</Box>
 */
