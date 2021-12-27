@@ -142,6 +142,8 @@ function FullPublish(props) {
     //console.log(mycid.toBaseEncodedString());
     console.log(mycid.toString());
     setCID(mycid.toString());
+
+    return mycid.toString();
   }
 
   const publishHive = async (author, postingkey, manifest, coursecid) => {
@@ -176,6 +178,7 @@ function FullPublish(props) {
     console.log(result);
 
     //TODO: Set permalinks
+    setPermalink("@" + author + "/" + manifest["hive_permalink"])
   }
 
   const fullpub = async () => {
@@ -207,7 +210,7 @@ function FullPublish(props) {
     setPubStep(p);
 
     console.log(walkProject(props.getProjTree()))
-    await publishIPFS();
+    const mycid = await publishIPFS();
 
     const q = pubStep.slice();
     q[0] = {...q[0], inprogress: false, finished: true };
@@ -215,7 +218,7 @@ function FullPublish(props) {
     setPubStep(q);
 
     //Submit post to Hive
-    await publishHive(author, postingkey, manifest, cid);
+    await publishHive(author, postingkey, manifest, mycid);
 
     const r = pubStep.slice();
     r[1] = {...r[1], inprogress: false, finished: true };
@@ -255,11 +258,11 @@ function FullPublish(props) {
             <List spacing={3}>
               <ListItem>
                 <ListIcon as={(pubStep[0].finished) ? MdCheckCircle : (pubStep[0].inprogress ? MdUpdate : MdSchedule)} color='green.500' />
-                Publish to IPFS {(pubStep[0].finished) ? ("...Done. (CID: " + props.cid + ")") : (pubStep[0].inprogress ? "..." : "")}
+                Publish to IPFS {(pubStep[0].finished) ? ("...Done. (CID: " + cid + ")") : (pubStep[0].inprogress ? "..." : "")}
               </ListItem>
               <ListItem>
                 <ListIcon as={(pubStep[1].finished) ? MdCheckCircle : (pubStep[1].inprogress ? MdUpdate : MdSchedule)} color='green.500' />
-                Post to Hive Blockchain {(pubStep[1].finished) ? ("...Done. (Permalink: " + props.permalink + ")") : (pubStep[1].inprogress ? "..." : "")}
+                Post to Hive Blockchain {(pubStep[1].finished) ? ("...Done. (Permalink: " + permalink + ")") : (pubStep[1].inprogress ? "..." : "")}
               </ListItem>
             </List>
             </VStack>
