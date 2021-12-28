@@ -106,6 +106,8 @@ function FullPublish(props) {
   const hiveName = useRef();
   const hivePostingKey = useRef();
 
+  const givenCID = useRef();
+
   const [cid, setCID] = useState("");
   const [permalink, setPermalink] = useState("");
 
@@ -225,6 +227,32 @@ function FullPublish(props) {
     setPubStep(r);
   }
 
+  const partialpub = async () => {
+    console.log(hivePostingKey.current.value);
+    const postingkey = hivePostingKey.current.value;
+
+    //Get manifest
+    let fs = bfs.require('fs');
+    let manifest = JSON.parse(fs.readFileSync("/welcome/manifest.json").toString());
+
+    let link = manifest["hive_permalink"];
+    let author = manifest["hive_author"];
+    console.log(link);
+    console.log(author);
+
+    const q = pubStep.slice();
+    q[0] = {...q[0], inprogress: false, finished: true };
+    q[1] = {...q[1], inprogress: true};
+    setPubStep(q);
+
+    //Submit post to Hive
+    await publishHive(author, postingkey, manifest, givenCID.current.value);
+
+    const r = pubStep.slice();
+    r[1] = {...r[1], inprogress: false, finished: true };
+    setPubStep(r);
+  }
+
   return (
     <>
       <Button onClick={onOpen}>Full publish</Button>
@@ -253,6 +281,14 @@ function FullPublish(props) {
                 placeholder='Please enter Posting Key'
               />
             </Box>
+            <Box>
+              <FormLabel htmlFor='givencid'>IPFS CID (Optional)</FormLabel>
+              <Input
+                ref={givenCID}
+                id='givencid'
+                placeholder='Please enter pre-existing IPFS CID'
+              />
+            </Box>
             <Divider/>
             <Text>Publish Progress:</Text>
             <List spacing={3}>
@@ -271,6 +307,9 @@ function FullPublish(props) {
           <ModalFooter>
             <Button colorScheme='blue' mr={3} onClick={fullpub}>
               Publish!
+            </Button>
+            <Button colorScheme='green' mr={3} onClick={partialpub}>
+              Post to Hive only
             </Button>
             <Button variant='ghost' onClick={onClose}>Cancel</Button>
           </ModalFooter>
